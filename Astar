@@ -1,0 +1,358 @@
+// Astar.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
+//
+
+#include "pch.h"
+#include <iostream>
+#include <vector>
+using namespace std;
+//设计map_dot类
+class map_data {
+public:
+	int dot_x = 0;	//像素点的x坐标
+	int dot_y = 0;	//y坐标
+	bool obs = 0; //O表示无障碍可以该点可以通过，1表示有障碍无法通过；
+	bool states = 0; //0表示该点未加入openlist，1表示已加入openlist
+	int  father_node = 0; //父节点
+	int  G_value = 0;
+	int  H_value = 0;
+	int  F_value = 0;
+	int  abs_distance = dot_y * 7 + dot_x;
+
+	map_data() = default;
+	map_data(int x, int y, int z, int w,int t,int g,int h, int f) 
+		:dot_x(x), dot_y(y), obs(z), states(w), father_node(t), G_value(g), H_value(h), F_value(f){ }; // 构造函数
+};
+
+vector<int> add_openlist(map_data Fmin_node, vector<map_data> openlist, vector<map_data> map);
+bool find_node_in_openlist(vector<map_data> openlist, map_data node);
+int step_insert_func(int F_value_now, vector<map_data>openlist);
+#define X_NUM  6
+#define Y_NUM  4
+int main()
+{
+
+	//	map_data map_dot(4,2,1,0); // map_data类实例化
+	int map_datax[5][7] = { 0, 0, 0, 0, 0, 0, 0,
+							0, 0, 0, 1, 0, 0, 0,
+							0, 0, 0, 1, 0, 0, 0,
+							0, 0, 0, 1, 0, 0, 0,
+							0, 0, 0, 0, 0, 0, 0, };
+	vector<map_data> map;
+	for (int z = 0; z < 35; z++)
+	{
+		int i = z % 7;
+		int j = z / 7;
+		//if (z % 7 == 0 && z != 0)
+		//	cout << endl;
+		//cout  << i << "," << j <<"," << map_datax[j][i]<<",     ";
+
+		map_data temp_dot(i, j, map_datax[j][i], 0, 0, 0, 0, 0);
+		map.push_back(temp_dot);
+	}
+	//for (int z = 0; z < 35; z++)
+	//{
+	//	cout << map[z].dot_x << map[z].dot_y<<"  ";
+	//}
+
+	//设置起点，设置终点
+	int start_x = 1;
+	int start_y = 2;
+	int end_x = 5;
+	int end_y = 2;
+
+	//设计寻路算法
+	//setp1:将起点放入openlist中。
+	int start = start_x + start_y * 7;
+	int end = end_x + end_y * 7;
+
+	vector<map_data> openlist;
+	vector<map_data> closelist;
+
+	closelist.push_back(map[start]);
+	map[start].states = 1;
+
+	//*************A*算法核心步骤***************************************
+	int close_size = closelist.size();
+	int Fmin_node_num = closelist[close_size-1].abs_distance;
+	vector<int> openlist_num;
+
+	bool find_finan_point_flag = 0;
+
+	while (find_finan_point_flag != 1)
+	{
+		openlist_num = add_openlist(map[Fmin_node_num],openlist, map); // 通过这段代码，实现了找到待加入openlist的node
+
+		//下一步：计算可行openlist中的G值，H值以及F值。
+		for (auto v : openlist_num)
+		{
+			//检查可行的node是否已经在openlist中
+			bool find_node = find_node_in_openlist(openlist, map[v]);
+			if (find_node == 1)//说明已经在openlist中
+			{
+				//首先检查当前G值和已存在的G值之间大小，
+				//计算当前 G值
+				if (map[v].states == 1)
+					continue;
+
+				int G_value_num;
+				int abs_dis = abs(map[v].dot_x - map[Fmin_node_num].dot_x) +
+					abs(map[v].dot_y - map[Fmin_node_num].dot_y);
+				if (abs_dis == 2)
+					G_value_num = map[Fmin_node_num].G_value + 14;
+				else if (abs_dis == 1)
+					G_value_num = map[Fmin_node_num].G_value + 10;
+				else
+					cout << abs_dis <<"  error!!!!1  "<< v << "Fmin_node_num" <<Fmin_node_num;
+				if (G_value_num < map[v].G_value)
+				{
+					map[v].G_value = G_value_num;
+					map[v].father_node = Fmin_node_num;
+					//计算H值
+					map[v].H_value = (abs(map[v].dot_x - map[end].dot_x) +
+						abs(map[v].dot_y - map[end].dot_y)) * 10;
+					//计算F值
+					map[v].F_value = map[v].H_value + map[v].G_value;
+				}
+			}
+			else
+			{
+				//将他们的父节点设置为当前F_min最小的
+				if (map[v].states == 1)
+					continue;
+				map[v].father_node = Fmin_node_num;
+				//计算G值
+				int abs_dis = abs(map[v].dot_x - map[Fmin_node_num].dot_x) +
+					abs(map[v].dot_y - map[Fmin_node_num].dot_y);
+				if (abs_dis == 2)
+					map[v].G_value = map[Fmin_node_num].G_value + 14;
+				else if (abs_dis == 1)
+					map[v].G_value = map[Fmin_node_num].G_value + 10;
+				else
+					cout << "error!!!!2";
+				//计算H值
+				map[v].H_value = (abs(map[v].dot_x - map[end].dot_x) +
+					abs(map[v].dot_y - map[end].dot_y)) * 10;
+				//计算F值
+				map[v].F_value = map[v].H_value + map[v].G_value;
+				
+				//将map[v]压入openlist中  按照F值大小顺序入
+				//采用二分插入，于是就可将数据按照F值的大小插入进去
+				int step_insert = step_insert_func(map[v].F_value, openlist);
+				openlist.insert(openlist.begin() + step_insert, map[v]);
+			}
+		}
+
+		//for (auto v : openlist)
+		//	cout << "openlist" << v.abs_distance << endl;
+		//cout << "openlist[0].abs_distance" << openlist[0].abs_distance << endl;
+		//for (auto v : closelist)
+		//	cout << "closelist" << v.abs_distance << endl;
+		//cout << endl;
+		//将F值最小的从openlist中删除并加入到closelist中
+		map[openlist[0].abs_distance].states = 1;
+		openlist[0].states = 1;
+		closelist.insert(closelist.begin(),*openlist.begin());
+		openlist.erase(openlist.begin());
+		Fmin_node_num = openlist[0].abs_distance;
+		//如果加入到closelist中的终点，程序结束
+		if (closelist[0].abs_distance == end)
+			find_finan_point_flag = 1;
+		for(auto v:openlist)
+			cout <<"openlist" << v.abs_distance<<endl;
+		cout <<"openlist[0].abs_distance"<< openlist[0].abs_distance << endl;
+		for (auto v : closelist)
+			cout << "closelist" << v.abs_distance << endl;
+		cout << endl;
+
+		int v = end;
+		int flag = 0;
+		while (flag == 0)
+		{
+			cout << map[v].abs_distance << "  ";
+			v = map[v].father_node;
+			if (v == 0)
+				flag = 1;
+		}
+	}
+
+	int flag = 0;
+	
+	while (flag == 0)
+	{
+
+	}
+
+	//for (auto v : openlist)
+	//{
+	//	cout <<"v.F_value="<< v.F_value << "v.G_value=" << v.G_value 
+	//		<< "v.G_value=" << v.H_value << "v.father_node=" << v.father_node<<endl;
+	//}
+
+	//*************A*算法核心步骤***************************************
+
+
+}
+bool find_node_in_openlist(vector<map_data> openlist, map_data node)
+{
+	int length = openlist.size();
+	
+	for (int i = 0; i < length; i++)
+	{
+		if (node.abs_distance == openlist[i].abs_distance )//即该节点在openlistzhong
+			return 1;
+	}
+	return 0;
+}
+
+//距离中心点的坐标，表示上     下		左		右		左上		右上		左下		右下
+//				      (0,-1）  (0,1)   (-1,0)   (1,0)  (-1,-1)     (1,-1)       (-1,1)     (1,1)
+vector<int> countT1 = { 1,-1,1,-1,1,-1,0,0 };
+vector<int> countT2 = { 1,1,-1,-1,0,0,1,-1 };
+vector<int> add_openlist(map_data Fmin_node, vector<map_data> openlist, vector<map_data> map)
+{
+	//寻找当前F值最小的节点附近的节点
+	int i = Fmin_node.dot_x;
+	int j = Fmin_node.dot_y;
+	int length = openlist.size();
+	vector<int> num;
+	unsigned char bits = 0x00;
+	//检查左上，右上，左下，右下是否存在障碍物
+	//边界检查
+	if (i == 0 && j > 0 && j < Y_NUM)
+		bits = bits | 0x20;
+	else if(i == X_NUM && j > 0 && j < Y_NUM)
+		bits = bits | 0x10;
+	else if (j == 0 && i > 0 && i < X_NUM)
+		bits = bits | 0x80;
+	else if (j == Y_NUM && i > 0 && i < X_NUM)
+		bits = bits | 0x40;
+	else if(i == 0 && j == 0)
+		bits = bits | 0x08;
+	else if (i == 0 && j == Y_NUM)
+		bits = bits | 0x02;
+	else if (i == X_NUM && j == 0)
+		bits = bits | 0x04;
+	else if (i == X_NUM && j == Y_NUM)
+		bits = bits | 0x01;
+	
+	//检查上下左右是否存在障碍物；
+	//检查上
+	//bits = 0 0 0 0 0 0 0 0   表示上 下 左 右 左上 右上 左下 右下
+	if (j == 0)//说明该点在地图的最上边
+		bits = bits | 0x8C;
+	else
+	{
+		int count_up = i + (j - 1) * 7;
+		if (map[count_up].obs == 1)//说明上方有障碍物
+			bits = bits | 0x8C;
+		count_up = (i - 1) + (j - 1) * 7;
+		if (i == 0)
+			;
+		else if (map[count_up].obs == 1 && i >= 0)//说明左上方有障碍物
+			bits = bits | 0x08;
+		else
+			;
+
+		count_up = (i + 1) + (j - 1) * 7;
+		if (i == X_NUM)
+			;
+		else if (map[count_up].obs == 1)//说明右上方有障碍物
+			bits = bits | 0x04;
+		else
+			;
+	}
+	cout << (int)bits << endl;
+	//检查下
+	if (j == Y_NUM)//说明该点在地图的最下边
+		bits = bits | 0x43;
+	else
+	{
+		int count_down = i + (j + 1) * 7;
+		if (map[count_down].obs == 1)//说明下方有障碍物
+			bits = bits | 0x43;
+
+		count_down = (i - 1) + (j + 1) * 7;
+		if (i == 0)
+			;
+		else if (map[count_down].obs == 1)//说明左下方有障碍物
+			bits = bits | 0x02;
+		else
+			;
+		count_down = (i + 1) + (j + 1) * 7;
+		if (i == X_NUM)
+			;
+		else if (map[count_down].obs == 1)//说明右下方有障碍物
+			bits = bits | 0x01;
+		else
+			;
+	}
+
+	//检查左
+	if (i == 0)//说明该点在地图的最左边
+		bits = bits | 0x2A;
+	else
+	{
+		int count_left = i - 1 + j * 7;
+		if (map[count_left].obs == 1)//说明左方有障碍物
+			bits = bits | 0x2A;
+	}
+
+	//检查右
+	if (i == X_NUM)//说明该点在地图的最右边
+		bits = bits | 0x15;
+	else
+	{
+		int count_right = i + 1 + j * 7;
+		if (map[count_right].obs == 1)//说明右方有障碍物
+			bits = bits | 0x15;
+	}
+	if (bits == 0xFF)
+		cout << "error!!!!";
+
+
+
+
+	//剩下的节点就是可以到达的节点了
+	//检测是否以及加入openlist,或者未加入
+	for (int x = 0; x < 8; x++)
+	{
+		if ((bits & 0x01) == 0) //说明该点可以加入openlist
+		{
+			int node_x = i + countT1[x];
+			int node_y = j + countT2[x];
+			num.push_back(node_x + node_y * 7);
+		}
+		bits = bits >> 1;
+			
+	}
+	return num;
+}
+
+//二分查找
+
+int step_insert_func(int F_value_now, vector<map_data>openlist)
+{
+	int start = 0;
+	int end = openlist.size() - 1;
+	if (end <= 0)
+		return 0;
+	int mid = (end - start) / 2 + start;
+	while (start != end)
+	{
+		if (F_value_now >= openlist[mid].F_value)
+		{
+			start = mid;
+			mid = (end - start) / 2 + start;
+		}
+		else
+		{
+			end = mid;
+			mid = (end - start) / 2 + start;
+		}
+		if (end - start <= 1)
+			break;
+	}
+	return start;
+	
+
+}
